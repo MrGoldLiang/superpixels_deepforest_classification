@@ -50,28 +50,64 @@ def get_superpixels_feature(image,segments):
     lab_image = color.rgb2lab(image)
     # 遍历每个超像素
     features_list = []
+    neighbors = get_superpixel_neighbors(segments)
     for segment_index in unique_segments:
         # 获取当前超像素的掩码
         segment_mask = (segments == segment_index)
 
         # 获取当前超像素在LAB颜色空间中的像素值
         segment_lab_pixels = lab_image[segment_mask]
-
+        segment_rgb_pixels = image[segment_mask]
         # 提取当前超像素的L值、A值、B值
         segment_L_values = np.mean(segment_lab_pixels[:, 0])
         segment_A_values = np.mean(segment_lab_pixels[:, 1])
         segment_B_values = np.mean(segment_lab_pixels[:, 2])
-
+        segment_r_values = np.mean(segment_rgb_pixels[:, 0])
+        segment_g_values = np.mean(segment_rgb_pixels[:, 1])
+        segment_b_values = np.mean(segment_rgb_pixels[:, 2])
         # 计算当前超像素的颜色方差
         segment_color_variance = np.var(segment_lab_pixels, axis=0)
-
+        segment_rgb_variance = np.var(segment_rgb_pixels, axis=0)
         feature_list =[]
         feature_list.append(segment_L_values)
         feature_list.append(segment_A_values)
         feature_list.append(segment_B_values)
+        # feature_list.append(segment_r_values)
+        # feature_list.append(segment_g_values)
+        # feature_list.append(segment_b_values)
         feature_list.append(segment_color_variance[0])
         feature_list.append(segment_color_variance[1])
         feature_list.append(segment_color_variance[2])
+        # feature_list.append(segment_rgb_variance[0])
+        # feature_list.append(segment_rgb_variance[1])
+        # feature_list.append(segment_rgb_variance[2])
         feature_array = feature_list
         features_list.append(feature_array)
-    return np.array(features_list,dtype=object)
+    se_features_list = []
+    for label,neighbor in neighbors.items():
+        n_features = np.array(features_list[label-1],dtype=object)
+        # print(n_features.shape)
+        for n in neighbor:
+            # print(np.array(features_list[n-1],dtype=object).shape)
+            n_features += np.array(features_list[n-1],dtype=object)
+
+        n_features /= len(neighbor)
+        n_features = n_features.tolist()
+        se_features_list.append(features_list[label-1]+n_features)
+    return np.array(se_features_list,dtype=object)
+
+
+def get_superpixel_neighbors(segments):
+
+    neighbors = {}
+    for label in np.unique(segments):
+        mask = segments == label
+        boundaries = segmentation.find_boundaries(mask, mode='outer')
+        neighbor_labels = np.unique(segments[boundaries])
+        nlist = []
+        for neighbor_label in neighbor_labels:
+            if neighbor_label != label:
+                nlist.append(neighbor_label)
+        neighbors[label] = nlist
+
+    return neighbors
