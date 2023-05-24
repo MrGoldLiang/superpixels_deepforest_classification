@@ -7,16 +7,20 @@ from skimage import io,segmentation,measure
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import GaussianNB
-
+from skimage.segmentation import mark_boundaries
 import func
 original_image = io.imread('28689_sat.jpg')
 label_image = io.imread('28689_mask.png')
-
+import matplotlib.pyplot as plt
 # 进行超像素分割
-segments = segmentation.slic(original_image, n_segments=1000, compactness=10)
+segments = segmentation.slic(original_image, n_segments=2000, compactness=10)
+
+
+
 dict_temp = func.superpixels_to_label(segments,label_image)
 y = np.array(dict_temp)
-X = func.get_superpixels_feature(image=original_image,segments=segments)
+X = func.slic_process2(img=original_image,segments=segments)
+# X = func.get_superpixels_feature(image=original_image,segments=segments)
 
 
 
@@ -29,7 +33,7 @@ print("\nTesting Accuracy: {:.3f} %".format(acc))
 
 
 # 创建随机森林分类器
-rf_classifier = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_classifier = RandomForestClassifier(n_estimators=100, random_state=1)
 nb_classifier = GaussianNB()
 svm_classifier = svm.SVC()
 # 训练分类器
